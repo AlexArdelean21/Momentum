@@ -1,23 +1,46 @@
-// Temporarily simplified version to debug the crash
+import { Suspense } from "react"
+import { getServerSession } from "next-auth"
+import { redirect } from "next/navigation"
+import { authOptions } from "@/lib/auth"
+import { Header } from "@/components/header"
+import { ActivityDashboard } from "@/components/activity-dashboard"
+import { AddActivityButton } from "@/components/add-activity-button"
+import { TodaySummary } from "@/components/today-summary"
+import { LoadingSpinner } from "@/components/loading-spinner"
+import { DatabaseStatus } from "@/components/database-status"
+
 export default async function Home() {
+  const session = await getServerSession(authOptions)
+  
+  if (!session) {
+    redirect("/auth/signin")
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <h1 className="text-4xl font-bold text-center mb-8">
-          🚀 Momentum App - Debug Mode
-        </h1>
-        <div className="text-center">
-          <p className="text-lg mb-4">App is running successfully!</p>
-          <p className="text-sm text-gray-600">
-            Environment: {process.env.NODE_ENV || 'development'}
-          </p>
-          <p className="text-sm text-gray-600">
-            Database URL exists: {process.env.DATABASE_URL ? '✅ Yes' : '❌ No'}
-          </p>
-          <p className="text-sm text-gray-600">
-            NextAuth Secret exists: {process.env.NEXTAUTH_SECRET ? '✅ Yes' : '❌ No'}
-          </p>
+        <Header />
+
+        <DatabaseStatus />
+
+        <div className="mb-10">
+          <Suspense fallback={<LoadingSpinner />}>
+            <TodaySummary />
+          </Suspense>
         </div>
+
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              Your Activities
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Track your daily habits and build streaks</p>
+          </div>
+          <AddActivityButton />
+        </div>
+
+        <Suspense fallback={<LoadingSpinner />}>
+          <ActivityDashboard />
+        </Suspense>
       </div>
     </div>
   )
