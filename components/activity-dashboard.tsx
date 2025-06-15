@@ -1,8 +1,13 @@
 import { getActivities } from "@/lib/database"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { ActivityCard } from "./activity-card"
 
 export async function ActivityDashboard() {
-  const activities = await getActivities()
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return null
+  
+  const activities = await getActivities(session.user.id)
 
   if (activities.length === 0) {
     return (

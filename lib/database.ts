@@ -12,10 +12,26 @@ export async function initializeDatabase() {
   try {
     console.log("Initializing database...")
 
+    // Create users table
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255),
+        avatar_url TEXT,
+        provider VARCHAR(50) DEFAULT 'credentials',
+        provider_id VARCHAR(255),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `
+
     // Create activities table
     await sql`
       CREATE TABLE IF NOT EXISTS activities (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         emoji VARCHAR(10) DEFAULT '🎯',
         description TEXT,
@@ -29,6 +45,7 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS activity_logs (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         activity_id UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         date DATE NOT NULL,
         count INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT NOW(),
@@ -37,7 +54,10 @@ export async function initializeDatabase() {
     `
 
     // Create indexes
+    await sql`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_activities_user_id ON activities(user_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_activity_logs_activity_id ON activity_logs(activity_id)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_activity_logs_date ON activity_logs(date)`
 
     // Create a simple streak calculation function
@@ -138,7 +158,7 @@ export async function initializeDatabase() {
   }
 }
 
-export async function getActivities(): Promise<Activity[]> {
+export async function getActivities(userId: string): Promise<Activity[]> {
   try {
     // Initialize database if not already done
     if (!isInitialized) {
@@ -168,6 +188,7 @@ export async function getActivities(): Promise<Activity[]> {
         WHERE count > 0
         GROUP BY activity_id
       ) total_stats ON a.id = total_stats.activity_id
+      WHERE a.user_id = ${userId}
       ORDER BY a.created_at DESC
     `
 
@@ -188,7 +209,7 @@ export async function getActivities(): Promise<Activity[]> {
   }
 }
 
-export async function getTodaySummary() {
+export async function getTodaySummary(userId: string) {
   try {
     // Initialize database if not already done
     if (!isInitialized) {
@@ -204,6 +225,7 @@ export async function getTodaySummary() {
       FROM activity_logs 
       WHERE date = ${today}
       AND count > 0
+      AND user_id = ${userId}
     `
 
     const summaryResult = result[0]

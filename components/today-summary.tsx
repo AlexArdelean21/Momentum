@@ -1,9 +1,14 @@
 import { getTodaySummary } from "@/lib/database"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { Card, CardContent } from "@/components/ui/card"
 import { Flame, Target } from "lucide-react"
 
 export async function TodaySummary() {
-  const summary = await getTodaySummary()
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return null
+  
+  const summary = await getTodaySummary(session.user.id)
 
   return (
     <Card className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-2xl overflow-hidden relative hover:shadow-3xl transition-all duration-300">
