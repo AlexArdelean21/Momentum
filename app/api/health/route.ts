@@ -1,18 +1,14 @@
-import { NextResponse } from "next/server"
-import { neon } from "@neondatabase/serverless"
-
-const sql = neon(process.env.DATABASE_URL!)
+import { NextResponse } from 'next/server'
 
 export async function GET() {
   try {
-    // Test database connection
-    const result = await sql`SELECT 1 as test`
-    
     return NextResponse.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      database: 'connected',
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || 'development',
+      database_url_exists: !!process.env.DATABASE_URL,
+      nextauth_secret_exists: !!process.env.NEXTAUTH_SECRET,
+      nextauth_url: process.env.NEXTAUTH_URL || 'not set'
     })
   } catch (error) {
     console.error('Health check failed:', error)
@@ -20,7 +16,6 @@ export async function GET() {
     return NextResponse.json({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
-      database: 'disconnected',
       error: error instanceof Error ? error.message : 'Unknown error',
       environment: process.env.NODE_ENV || 'development'
     }, { status: 500 })
