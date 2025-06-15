@@ -139,14 +139,13 @@ export function ActivityCard({ activity }: ActivityCardProps) {
                 className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border-0 text-lg"
               >
                 {isLoading ? (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-center space-x-2">
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                     <span>Adding...</span>
                   </div>
                 ) : (
-                  <div className="flex items-center space-x-2">
-                    <Plus className="h-6 w-6" />
-                    <span>+1</span>
+                  <div className="flex items-center justify-center space-x-2">
+                    <span className="text-2xl font-bold">+1</span>
                   </div>
                 )}
               </Button>

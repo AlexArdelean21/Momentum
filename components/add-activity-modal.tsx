@@ -131,16 +131,16 @@ export function AddActivityModal({ isOpen, onClose }: AddActivityModalProps) {
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Choose an Emoji
                 </label>
-                <div className="grid grid-cols-10 gap-2 max-h-32 overflow-y-auto p-2 border-2 border-gray-200 dark:border-gray-600 rounded-xl">
+                <div className="grid grid-cols-10 gap-1 max-h-32 overflow-y-auto p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50/50 dark:bg-gray-700/20">
                   {EMOJI_OPTIONS.map((emojiOption) => (
                     <button
                       key={emojiOption}
                       type="button"
                       onClick={() => setEmoji(emojiOption)}
-                      className={`p-2 text-xl rounded-lg transition-all hover:scale-110 ${
+                      className={`p-1.5 text-xl rounded-lg transition-all hover:scale-110 aspect-square flex items-center justify-center ${
                         emoji === emojiOption
-                          ? "bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-900/30 dark:to-red-900/30 ring-2 ring-orange-500 shadow-lg"
-                          : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                          ? "bg-gradient-to-r from-orange-100 to-red-100 dark:from-orange-900/50 dark:to-red-900/50 ring-2 ring-orange-500 shadow-lg"
+                          : "hover:bg-gray-100 dark:hover:bg-gray-600"
                       }`}
                     >
                       {emojiOption}

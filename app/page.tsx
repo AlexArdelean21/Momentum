@@ -14,14 +14,19 @@ export default function Home() {
 
         <DatabaseStatus />
 
-        <div className="mb-8">
+        <div className="mb-10">
           <Suspense fallback={<LoadingSpinner />}>
             <TodaySummary />
           </Suspense>
         </div>
 
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Your Activities</h2>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
+              Your Activities
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Track your daily habits and build streaks</p>
+          </div>
           <AddActivityButton />
         </div>
 
