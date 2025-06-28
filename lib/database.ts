@@ -3,168 +3,33 @@ import type { Activity } from "./types"
 
 const sql = neon(process.env.DATABASE_URL!)
 
-// Simple in-memory flag to track if database is initialized
-let isInitialized = false
+// Default user ID for single-user application
+const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001'
 
 export async function initializeDatabase() {
-  if (isInitialized) return // Skip if already initialized
-
   try {
-    console.log("Initializing database...")
+    console.log("Checking database initialization...")
 
-    // Create users table
-    await sql`
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(255),
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password_hash VARCHAR(255),
-        avatar_url TEXT,
-        provider VARCHAR(50) DEFAULT 'credentials',
-        provider_id VARCHAR(255),
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
+    // Simple check - just ensure the default user exists
+    const users = await sql`
+      SELECT id FROM users WHERE id = ${DEFAULT_USER_ID}
     `
 
-    // Create activities table
-    await sql`
-      CREATE TABLE IF NOT EXISTS activities (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        name VARCHAR(255) NOT NULL,
-        emoji VARCHAR(10) DEFAULT '🎯',
-        description TEXT,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `
-
-    // Create activity_logs table
-    await sql`
-      CREATE TABLE IF NOT EXISTS activity_logs (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        activity_id UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
-        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        date DATE NOT NULL,
-        count INTEGER DEFAULT 1,
-        created_at TIMESTAMP DEFAULT NOW(),
-        UNIQUE(activity_id, date)
-      )
-    `
-
-    // Create indexes
-    await sql`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_activities_user_id ON activities(user_id)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_activity_logs_activity_id ON activity_logs(activity_id)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id)`
-    await sql`CREATE INDEX IF NOT EXISTS idx_activity_logs_date ON activity_logs(date)`
-
-    // Create a simple streak calculation function
-    await sql`
-      CREATE OR REPLACE FUNCTION calculate_current_streak(target_activity_id UUID)
-      RETURNS INTEGER AS $$
-      DECLARE
-          streak_count INTEGER := 0;
-          check_date DATE := CURRENT_DATE;
-      BEGIN
-          WHILE EXISTS (
-              SELECT 1 FROM activity_logs 
-              WHERE activity_id = target_activity_id 
-              AND date = check_date
-              AND count > 0
-          ) LOOP
-              streak_count := streak_count + 1;
-              check_date := check_date - INTERVAL '1 day';
-          END LOOP;
-          
-          RETURN streak_count;
-      END;
-      $$ LANGUAGE plpgsql;
-    `
-
-    await sql`
-      CREATE OR REPLACE FUNCTION calculate_best_streak(target_activity_id UUID)
-      RETURNS INTEGER AS $$
-      DECLARE
-          max_streak INTEGER := 0;
-          current_streak INTEGER := 0;
-          prev_date DATE;
-          log_record RECORD;
-      BEGIN
-          FOR log_record IN 
-              SELECT date FROM activity_logs 
-              WHERE activity_id = target_activity_id 
-              AND count > 0
-              ORDER BY date ASC
-          LOOP
-              IF prev_date IS NULL OR log_record.date = prev_date + INTERVAL '1 day' THEN
-                  current_streak := current_streak + 1;
-              ELSE
-                  current_streak := 1;
-              END IF;
-              
-              IF current_streak > max_streak THEN
-                  max_streak := current_streak;
-              END IF;
-              
-              prev_date := log_record.date;
-          END LOOP;
-          
-          RETURN max_streak;
-      END;
-      $$ LANGUAGE plpgsql;
-    `
-
-    // Check if we have any activities, if not, add demo data
-    const existingActivities = await sql`SELECT COUNT(*) as count FROM activities`
-
-    if (Number(existingActivities[0].count) === 0) {
-      console.log("Adding demo activities...")
-
-      const demoActivities = await sql`
-        INSERT INTO activities (name, emoji, description) VALUES
-        ('Morning Exercise', '💪', '30 minutes of workout to start the day'),
-        ('Read Books', '📚', 'Read for at least 20 minutes daily'),
-        ('Meditation', '🧘', 'Daily mindfulness and meditation practice')
-        RETURNING id
-      `
-
-      // Add some demo logs for the past few days
-      const today = new Date()
-      for (let i = 0; i < 5; i++) {
-        const date = new Date(today)
-        date.setDate(date.getDate() - i)
-        const dateStr = date.toISOString().split("T")[0]
-
-        for (const activity of demoActivities) {
-          if (Math.random() > 0.3) {
-            // 70% chance of doing the activity
-            await sql`
-              INSERT INTO activity_logs (activity_id, date, count)
-              VALUES (${activity.id}, ${dateStr}, ${Math.floor(Math.random() * 3) + 1})
-              ON CONFLICT (activity_id, date) DO NOTHING
-            `
-          }
-        }
-      }
+    if (users.length === 0) {
+      console.log("Default user not found. Please initialize the database by calling /api/init-db")
+      return false
     }
 
-    isInitialized = true
-    console.log("Database initialized successfully")
+    console.log("Database appears to be initialized")
+    return true
   } catch (error) {
-    console.error("Database initialization failed:", error)
-    // Don't throw here to allow the app to continue
+    console.error("Database check failed:", error)
+    return false
   }
 }
 
-export async function getActivities(userId: string): Promise<Activity[]> {
+export async function getActivities(userId: string = DEFAULT_USER_ID): Promise<Activity[]> {
   try {
-    // Initialize database if not already done
-    if (!isInitialized) {
-      await initializeDatabase()
-    }
-
     const today = new Date().toISOString().split("T")[0]
 
     const activities = await sql`
@@ -209,13 +74,8 @@ export async function getActivities(userId: string): Promise<Activity[]> {
   }
 }
 
-export async function getTodaySummary(userId: string) {
+export async function getTodaySummary(userId: string = DEFAULT_USER_ID) {
   try {
-    // Initialize database if not already done
-    if (!isInitialized) {
-      await initializeDatabase()
-    }
-
     const today = new Date().toISOString().split("T")[0]
 
     const result = await sql`

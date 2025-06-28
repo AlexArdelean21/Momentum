@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, Undo2, Trash2, MoreVertical } from "lucide-react"
+import { Plus, Undo2, Trash2, MoreVertical, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,16 +10,39 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { incrementActivity, undoLastIncrement, deleteActivity } from "@/lib/actions"
 import { ConfettiEffect } from "./confetti-effect"
 import { StreakFlame } from "./streak-flame"
+import { EditActivityModal } from "./edit-activity-modal"
 import type { Activity } from "@/lib/types"
 
 interface ActivityCardProps {
   activity: Activity
 }
 
+// Motivational messages for when today's count is 0
+const MOTIVATIONAL_MESSAGES = [
+  "Don't forget about me! 🥺",
+  "You can do this! 💪",
+  "Ready when you are! ✨",
+  "Let's build that streak! 🔥",
+  "I'm waiting for you! 😊",
+  "Today's the day! 🌟",
+  "You've got this! 💫",
+  "Time to shine! ⭐",
+  "Let's make it happen! 🚀",
+  "Your future self will thank you! 🙏",
+  "Small steps, big results! 👣",
+  "Progress over perfection! 📈"
+]
+
 export function ActivityCard({ activity }: ActivityCardProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [showStreakFlame, setShowStreakFlame] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+
+  // Get a consistent motivational message for this activity
+  const motivationalMessage = MOTIVATIONAL_MESSAGES[
+    activity.id.charCodeAt(0) % MOTIVATIONAL_MESSAGES.length
+  ]
 
   const handleIncrement = async () => {
     setIsLoading(true)
@@ -63,6 +86,10 @@ export function ActivityCard({ activity }: ActivityCardProps) {
     }
   }
 
+  const handleEdit = () => {
+    setIsEditModalOpen(true)
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -95,6 +122,10 @@ export function ActivityCard({ activity }: ActivityCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleEdit} className="text-blue-600 dark:text-blue-400">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Activity
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDelete} className="text-red-600 dark:text-red-400">
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Activity
@@ -105,11 +136,21 @@ export function ActivityCard({ activity }: ActivityCardProps) {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-4">
             <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl border border-blue-200/50 dark:border-blue-700/50">
-              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{activity.todayCount || 0}</div>
-              <div className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-1">Today</div>
+              {(activity.todayCount || 0) > 0 ? (
+                <>
+                  <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{activity.todayCount}</div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-1">Today</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm font-medium text-blue-600 dark:text-blue-400 px-2 py-1">
+                    {motivationalMessage}
+                  </div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400 font-semibold mt-1">Today</div>
+                </>
+              )}
             </div>
 
             <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-xl border border-green-200/50 dark:border-green-700/50">
@@ -130,7 +171,6 @@ export function ActivityCard({ activity }: ActivityCardProps) {
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex space-x-3">
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
               <Button
@@ -162,7 +202,6 @@ export function ActivityCard({ activity }: ActivityCardProps) {
             </Button>
           </div>
 
-          {/* Streak Badge */}
           {activity.currentStreak && activity.currentStreak > 0 && (
             <div className="flex justify-center">
               <Badge
@@ -176,7 +215,12 @@ export function ActivityCard({ activity }: ActivityCardProps) {
         </CardContent>
       </Card>
 
-      {/* Effects */}
+      <EditActivityModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        activity={activity}
+      />
+
       <AnimatePresence>
         {showConfetti && <ConfettiEffect />}
         {showStreakFlame && <StreakFlame streak={activity.currentStreak || 0} />}

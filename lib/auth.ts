@@ -58,6 +58,11 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
+      console.log("🔍 SignIn callback triggered:", { 
+        userEmail: user.email, 
+        provider: account?.provider 
+      })
+      
       if (account?.provider === "google") {
         try {
           // Check if user exists
@@ -88,26 +93,47 @@ export const authOptions: NextAuthOptions = {
       return true
     },
     async jwt({ token, user }) {
+      console.log("🔍 JWT callback triggered:", { 
+        tokenEmail: token.email, 
+        userEmail: user?.email,
+        tokenSub: token.sub 
+      })
+      
       if (user) {
         try {
+          console.log("🔍 Fetching user from database for email:", user.email)
           const users = await sql`
             SELECT id, email, name, avatar_url FROM users 
             WHERE email = ${user.email}
           `
           
+          console.log("🔍 Database query result:", users)
+          
           if (users.length > 0) {
             token.userId = users[0].id
+            console.log("🔍 Set token.userId to:", users[0].id)
+          } else {
+            console.log("🔍 No user found in database for email:", user.email)
           }
         } catch (error) {
-          console.error("JWT callback error:", error)
+          console.error("🔍 JWT callback error:", error)
         }
       }
       return token
     },
     async session({ session, token }) {
+      console.log("🔍 Session callback triggered:", { 
+        sessionEmail: session.user?.email,
+        tokenSub: token.sub,
+        tokenUserId: token.userId 
+      })
+      
       if (token.userId) {
         session.user.id = token.userId as string
+        console.log("🔍 Set session.user.id to:", token.userId)
       }
+      
+      console.log("🔍 Final session object:", session)
       return session
     },
   },

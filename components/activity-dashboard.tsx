@@ -1,13 +1,11 @@
 import { getActivities } from "@/lib/database"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
 import { ActivityCard } from "./activity-card"
 
+// Default user ID for single-user application
+const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001'
+
 export async function ActivityDashboard() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) return null
-  
-  const activities = await getActivities(session.user.id)
+  const activities = await getActivities(DEFAULT_USER_ID)
 
   if (activities.length === 0) {
     return (

@@ -3,12 +3,33 @@ import { neon } from "@neondatabase/serverless"
 
 const sql = neon(process.env.DATABASE_URL!)
 
+// Default user ID for single-user application
+const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001'
+
 export async function POST() {
   try {
-    // Check if tables exist and create them if they don't
+    console.log("Initializing database...")
+
+    // Create users table first
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255),
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255),
+        avatar_url TEXT,
+        provider VARCHAR(50) DEFAULT 'credentials',
+        provider_id VARCHAR(255),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `
+
+    // Create activities table
     await sql`
       CREATE TABLE IF NOT EXISTS activities (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         emoji VARCHAR(10) DEFAULT '🎯',
         description TEXT,
@@ -17,10 +38,12 @@ export async function POST() {
       )
     `
 
+    // Create activity_logs table
     await sql`
       CREATE TABLE IF NOT EXISTS activity_logs (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         activity_id UUID REFERENCES activities(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         date DATE NOT NULL,
         count INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT NOW(),
@@ -28,9 +51,16 @@ export async function POST() {
       )
     `
 
-    // Create indexes if they don't exist
+    // Create indexes
+    await sql`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_activities_user_id ON activities(user_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_activity_logs_activity_id ON activity_logs(activity_id)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_activity_logs_date ON activity_logs(date)`
+
+    // Drop existing functions if they exist to avoid conflicts
+    await sql`DROP FUNCTION IF EXISTS calculate_current_streak(UUID)`
+    await sql`DROP FUNCTION IF EXISTS calculate_best_streak(UUID)`
 
     // Create the streak calculation functions
     await sql`
@@ -91,38 +121,53 @@ export async function POST() {
       $$ LANGUAGE plpgsql;
     `
 
+    // Create the default user
     await sql`
-      CREATE OR REPLACE FUNCTION get_activity_stats(activity_uuid UUID, target_date DATE DEFAULT CURRENT_DATE)
-      RETURNS TABLE(
-          today_count INTEGER,
-          total_days BIGINT,
-          current_streak INTEGER,
-          best_streak INTEGER
-      ) AS $$
-      BEGIN
-          RETURN QUERY
-          SELECT 
-              COALESCE((
-                  SELECT al.count 
-                  FROM activity_logs al 
-                  WHERE al.activity_id = activity_uuid 
-                  AND al.date = target_date
-              ), 0) as today_count,
-              
-              COALESCE((
-                  SELECT COUNT(DISTINCT al.date)
-                  FROM activity_logs al 
-                  WHERE al.activity_id = activity_uuid 
-                  AND al.count > 0
-              ), 0) as total_days,
-              
-              calculate_current_streak(activity_uuid) as current_streak,
-              calculate_best_streak(activity_uuid) as best_streak;
-      END;
-      $$ LANGUAGE plpgsql;
+      INSERT INTO users (id, email, name, provider) 
+      VALUES (${DEFAULT_USER_ID}, 'user@momentum.app', 'Momentum User', 'default')
+      ON CONFLICT (id) DO NOTHING
     `
 
-    return NextResponse.json({ success: true, message: "Database initialized successfully" })
+    // Check if we have any activities for the default user, if not, add demo data
+    const existingActivities = await sql`
+      SELECT COUNT(*) as count FROM activities WHERE user_id = ${DEFAULT_USER_ID}
+    `
+
+    if (Number(existingActivities[0].count) === 0) {
+      console.log("Adding demo activities...")
+
+      const demoActivities = await sql`
+        INSERT INTO activities (user_id, name, emoji, description) VALUES
+        (${DEFAULT_USER_ID}, 'Morning Exercise', '💪', '30 minutes of workout to start the day'),
+        (${DEFAULT_USER_ID}, 'Read Books', '📚', 'Read for at least 20 minutes daily'),
+        (${DEFAULT_USER_ID}, 'Meditation', '🧘', 'Daily mindfulness and meditation practice')
+        RETURNING id
+      `
+
+      // Add some demo logs for the past few days
+      const today = new Date()
+      for (let i = 0; i < 5; i++) {
+        const date = new Date(today)
+        date.setDate(date.getDate() - i)
+        const dateStr = date.toISOString().split("T")[0]
+
+        for (const activity of demoActivities) {
+          if (Math.random() > 0.3) {
+            // 70% chance of doing the activity
+            await sql`
+              INSERT INTO activity_logs (activity_id, user_id, date, count)
+              VALUES (${activity.id}, ${DEFAULT_USER_ID}, ${dateStr}, ${Math.floor(Math.random() * 3) + 1})
+              ON CONFLICT (activity_id, date) DO NOTHING
+            `
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: "Database initialized successfully with default user and demo data" 
+    })
   } catch (error) {
     console.error("Database initialization error:", error)
     return NextResponse.json(

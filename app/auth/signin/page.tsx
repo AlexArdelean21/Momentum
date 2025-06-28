@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Flame, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { motion } from "framer-motion"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
 
 export default function SignIn() {
   const [email, setEmail] = useState("")
@@ -20,35 +22,49 @@ export default function SignIn() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("🔍 Form submitted with:", { email, password: "***" })
     setIsLoading(true)
     setError("")
 
     try {
+      console.log("🔍 Calling signIn...")
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
       })
 
+      console.log("🔍 SignIn result:", result)
+
       if (result?.error) {
         setError("Invalid email or password")
-      } else {
+        console.log("🔍 SignIn error:", result.error)
+      } else if (result?.ok) {
+        console.log("🔍 SignIn successful, checking session...")
+        const session = await getSession()
+        console.log("🔍 Session after signin:", session)
         router.push("/")
-        router.refresh()
       }
     } catch (error) {
-      setError("Something went wrong. Please try again.")
+      console.error("🔍 SignIn exception:", error)
+      setError("An error occurred during sign in")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleGoogleSignIn = async () => {
+    console.log("🔍 Google sign in clicked")
     setIsLoading(true)
     try {
-      await signIn("google", { callbackUrl: "/" })
+      console.log("🔍 Calling signIn with google...")
+      const result = await signIn("google", { 
+        callbackUrl: "/",
+        redirect: true 
+      })
+      console.log("🔍 Google signIn result:", result)
     } catch (error) {
-      setError("Failed to sign in with Google")
+      console.error("🔍 Google signIn error:", error)
       setIsLoading(false)
     }
   }
@@ -88,6 +104,7 @@ export default function SignIn() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 h-12 rounded-xl border-2 border-gray-200 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-400"
                     required
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -100,6 +117,7 @@ export default function SignIn() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 pr-12 h-12 rounded-xl border-2 border-gray-200 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-400"
                     required
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
