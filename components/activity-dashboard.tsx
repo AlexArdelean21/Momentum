@@ -1,11 +1,8 @@
 import { getActivities } from "@/lib/database"
 import { ActivityCard } from "./activity-card"
 
-// Default user ID for single-user application
-const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001'
-
 export async function ActivityDashboard() {
-  const activities = await getActivities(DEFAULT_USER_ID)
+  const activities = await getActivities()
 
   if (activities.length === 0) {
     return (

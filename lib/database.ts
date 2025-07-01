@@ -1,22 +1,31 @@
 import { neon } from "@neondatabase/serverless"
 import type { Activity } from "./types"
+import { auth } from "./auth"
 
 const sql = neon(process.env.DATABASE_URL!)
 
-// Default user ID for single-user application
-const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001'
+async function getCurrentUser() {
+  const session = await auth()
+  if (!session?.user?.id) {
+    throw new Error("You must be logged in to view activities")
+  }
+  return session.user.id
+}
 
 export async function initializeDatabase() {
   try {
     console.log("Checking database initialization...")
 
-    // Simple check - just ensure the default user exists
-    const users = await sql`
-      SELECT id FROM users WHERE id = ${DEFAULT_USER_ID}
+    // Check if tables exist by trying to query users table
+    const result = await sql`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'users'
+      ) as table_exists
     `
 
-    if (users.length === 0) {
-      console.log("Default user not found. Please initialize the database by calling /api/init-db")
+    if (!result[0]?.table_exists) {
+      console.log("Database tables not found. Please initialize the database by calling /api/init-db")
       return false
     }
 
@@ -28,8 +37,9 @@ export async function initializeDatabase() {
   }
 }
 
-export async function getActivities(userId: string = DEFAULT_USER_ID): Promise<Activity[]> {
+export async function getActivities(): Promise<Activity[]> {
   try {
+    const userId = await getCurrentUser()
     const today = new Date().toISOString().split("T")[0]
 
     const activities = await sql`
@@ -74,8 +84,9 @@ export async function getActivities(userId: string = DEFAULT_USER_ID): Promise<A
   }
 }
 
-export async function getTodaySummary(userId: string = DEFAULT_USER_ID) {
+export async function getTodaySummary() {
   try {
+    const userId = await getCurrentUser()
     const today = new Date().toISOString().split("T")[0]
 
     const result = await sql`

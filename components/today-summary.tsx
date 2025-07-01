@@ -2,11 +2,8 @@ import { getTodaySummary } from "@/lib/database"
 import { Card, CardContent } from "@/components/ui/card"
 import { Flame, Target } from "lucide-react"
 
-// Default user ID for single-user application
-const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001'
-
 export async function TodaySummary() {
-  const summary = await getTodaySummary(DEFAULT_USER_ID)
+  const summary = await getTodaySummary()
 
   return (
     <Card className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-2xl overflow-hidden relative hover:shadow-3xl transition-all duration-300">
