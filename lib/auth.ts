@@ -4,6 +4,12 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { neon } from "@neondatabase/serverless"
 import bcrypt from "bcryptjs"
 
+// New, simpler diagnostic log
+console.log("=============================================");
+console.log("✅ [auth.ts] This log is from the top level of lib/auth.ts");
+console.log("✅ [auth.ts] If you see this in DEPLOY logs, the module was imported.");
+console.log("=============================================");
+
 const sql = neon(process.env.DATABASE_URL!)
 
 // Add this self-invoking function to test the DB connection on startup
