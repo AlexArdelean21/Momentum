@@ -6,8 +6,21 @@ import bcrypt from "bcryptjs"
 
 const sql = neon(process.env.DATABASE_URL!)
 
-// Add this line for debugging at the top level
-console.log("🚀 [auth.ts] NEXTAUTH_URL read by server:", process.env.NEXTAUTH_URL);
+// Add this self-invoking function to test the DB connection on startup
+;(async () => {
+  try {
+    console.log("🚀 [auth.ts] Testing database connection...")
+    await sql`SELECT 1`
+    console.log("✅ [auth.ts] Database connection successful.")
+  } catch (error) {
+    console.error("❌ [auth.ts] DATABASE CONNECTION FAILED:", error)
+    // This will force the application to crash with a clear error
+    // if the database is unreachable, making it visible in Railway logs.
+    process.exit(1)
+  }
+})()
+
+console.log("🚀 [auth.ts] NEXTAUTH_URL read by server:", process.env.NEXTAUTH_URL)
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-key-for-development-only",
