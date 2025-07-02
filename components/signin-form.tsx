@@ -10,6 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Flame, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 
 export default function SignInForm() {
   const [email, setEmail] = useState("")
@@ -112,6 +114,13 @@ export default function SignInForm() {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox id="remember-me" defaultChecked />
+                <Label htmlFor="remember-me" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Remember me for 30 days
+                </Label>
               </div>
 
               {error && (

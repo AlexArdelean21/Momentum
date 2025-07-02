@@ -1,8 +1,8 @@
-import NextAuth from "next-auth"
-import type { NextAuthOptions } from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
+import NextAuth, { NextAuthOptions } from "next-auth"
+import Credentials from "next-auth/providers/credentials"
 import { neon } from "@neondatabase/serverless"
 import bcrypt from "bcryptjs"
+import { User } from "./types"
 
 // New, simpler diagnostic log
 console.log("=============================================");
@@ -35,7 +35,7 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   providers: [
-    CredentialsProvider({
+    Credentials({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
