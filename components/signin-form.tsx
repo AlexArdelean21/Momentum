@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label"
 export default function SignInForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [rememberMe, setRememberMe] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -40,6 +41,7 @@ export default function SignInForm() {
     const result = await signIn("credentials", {
       email,
       password,
+      rememberMe,
       redirect: false,
       callbackUrl,
     })
@@ -117,7 +119,11 @@ export default function SignInForm() {
               </div>
 
               <div className="flex items-center space-x-2">
-                <Checkbox id="remember-me" defaultChecked />
+                <Checkbox
+                  id="remember-me"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                />
                 <Label htmlFor="remember-me" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Remember me for 30 days
                 </Label>

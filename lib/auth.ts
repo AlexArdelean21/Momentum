@@ -40,6 +40,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        rememberMe: { label: "Remember Me", type: "checkbox" },
       },
       async authorize(credentials) {
         console.log("🔍 Authorize called with email:", credentials?.email)
@@ -83,6 +84,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.name || null,
             image: user.avatar_url || null,
+            rememberMe: credentials?.rememberMe,
           }
         } catch (error) {
           console.error("🔍 Auth error:", error)
@@ -92,7 +94,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       console.log("🔍 JWT callback - user present:", !!user)
       console.log("🔍 JWT callback - token before:", { email: token.email, userId: token.userId })
       
@@ -102,14 +104,19 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email
         token.name = user.name
         token.picture = user.image
+        token.rememberMe = user.rememberMe
         console.log("🔍 JWT callback - stored user data in token:", token.userId)
       }
+
+      if (trigger === "update" && session?.rememberMe !== undefined) {
+        token.rememberMe = session.rememberMe
+      }
       
-      console.log("🔍 JWT callback - token after:", { email: token.email, userId: token.userId })
+      console.log("🔍 JWT callback - token after:", { email: token.email, userId: token.userId, rememberMe: token.rememberMe })
       return token
     },
     async session({ session, token }) {
-      console.log("🔍 Session callback - token:", { email: token.email, userId: token.userId })
+      console.log("🔍 Session callback - token:", { email: token.email, userId: token.userId, rememberMe: token.rememberMe })
       
       if (token.userId) {
         session.user.id = token.userId as string
@@ -117,6 +124,14 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name as string || null
         session.user.image = token.picture as string || null
         console.log("🔍 Session callback - final session user id:", session.user.id)
+      }
+
+      // Set maxAge dynamically
+      if (token.rememberMe) {
+        session.expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      } else {
+        // Shorter expiry for session cookies
+        session.expires = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
       }
       
       return session
