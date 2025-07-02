@@ -1,14 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { signIn, useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Flame, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { motion } from "framer-motion"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function SignIn() {
   const [email, setEmail] = useState("")
@@ -17,76 +18,46 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
-  const { data: session, status } = useSession()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get("callbackUrl") || "/"
 
-  // Debug session status
   useEffect(() => {
-    console.log("🔍 Session status:", status)
-    console.log("🔍 Session data:", session)
-    
-    if (status === "authenticated" && session?.user) {
-      console.log("🔍 User is already authenticated, redirecting...")
-      router.push("/")
+    const errorParam = searchParams.get("error")
+    if (errorParam === "CredentialsSignin") {
+      setError("Invalid email or password. Please try again.")
+    } else if (errorParam) {
+      setError("An error occurred. Please try again.")
     }
-  }, [session, status, router])
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("🔍 FORM SUBMIT - Email:", email)
     setIsLoading(true)
     setError("")
 
-    try {
-      console.log("🔍 CALLING SIGNIN...")
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+      callbackUrl,
+    })
 
-      console.log("🔍 SIGNIN RESULT:", JSON.stringify(result, null, 2))
-
-      if (result?.error) {
-        console.log("🔍 SIGNIN ERROR:", result.error)
-        setError("Invalid email or password")
-      } else if (result?.ok) {
-        console.log("🔍 SIGNIN SUCCESS - URL:", result.url)
-        setError("")
-        
-        // Instead of immediate redirect, let the session update naturally
-        console.log("🔍 Waiting for session update...")
-        
-        // Use router.push instead of window.location.href
-        setTimeout(() => {
-          console.log("🔍 Redirecting to home page...")
-          router.push("/")
-        }, 1000)
-      } else {
-        console.log("🔍 UNEXPECTED SIGNIN RESULT:", result)
-        setError("Authentication failed. Please try again.")
-      }
-    } catch (error) {
-      console.error("🔍 SIGNIN EXCEPTION:", error)
-      setError("An error occurred during sign in")
-    } finally {
+    if (result?.error) {
+      setError("Invalid email or password.")
       setIsLoading(false)
+    } else {
+      // On successful sign-in, NextAuth handles the redirect via callbackUrl
+      // Forcing a reload ensures the session is updated correctly.
+      router.push(callbackUrl)
+      router.refresh()
     }
   }
 
-  // Show loading state while checking session
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Checking authentication...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 relative">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -109,28 +80,17 @@ export default function SignIn() {
           </CardHeader>
 
           <CardContent className="space-y-6">
-            {/* Debug info in development */}
-            {process.env.NODE_ENV === "development" && (
-              <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs">
-                <p>Status: {status}</p>
-                <p>User: {session?.user?.email || "None"}</p>
-              </div>
-            )}
-            
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
-                    id="email"
-                    name="email"
                     type="email"
                     placeholder="Email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 h-12 rounded-xl border-2 border-gray-200 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-400"
                     required
-                    disabled={isLoading}
                     autoComplete="email"
                   />
                 </div>
@@ -138,15 +98,12 @@ export default function SignIn() {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
-                    id="password"
-                    name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 pr-12 h-12 rounded-xl border-2 border-gray-200 dark:border-gray-600 focus:border-orange-500 dark:focus:border-orange-400"
                     required
-                    disabled={isLoading}
                     autoComplete="current-password"
                   />
                   <button
@@ -171,7 +128,7 @@ export default function SignIn() {
                 className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-3 rounded-xl h-12 shadow-lg hover:shadow-xl transition-all duration-300 border-0"
               >
                 {isLoading ? (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-center space-x-2">
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                     <span>Signing in...</span>
                   </div>
@@ -181,16 +138,14 @@ export default function SignIn() {
               </Button>
             </form>
 
-            <div className="text-center">
-              <p className="text-gray-600 dark:text-gray-400">
-                Don't have an account?{" "}
-                <Link
-                  href="/auth/signup"
-                  className="text-orange-600 hover:text-orange-500 dark:text-orange-400 dark:hover:text-orange-300 font-semibold"
-                >
-                  Sign up
-                </Link>
-              </p>
+            <div className="mt-6 text-center text-sm">
+              Don't have an account?{" "}
+              <Link
+                href="/auth/signup"
+                className="text-orange-600 hover:text-orange-500 dark:text-orange-400 dark:hover:text-orange-300 font-semibold"
+              >
+                Sign up
+              </Link>
             </div>
           </CardContent>
         </Card>

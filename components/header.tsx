@@ -1,10 +1,15 @@
 "use client"
 
-import { Flame, LogOut, User } from "lucide-react"
-import { ThemeToggle } from "./theme-toggle"
 import { useSession, signOut } from "next-auth/react"
+import { ThemeToggle } from "./theme-toggle"
 import { Button } from "./ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { Flame, LogOut, User, Menu } from "lucide-react"
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 
 export function Header() {
   const { data: session } = useSession()
@@ -24,7 +29,9 @@ export function Header() {
           </p>
         </div>
       </div>
-      <div className="flex items-center space-x-4">
+
+      {/* Desktop Menu */}
+      <div className="hidden md:flex items-center space-x-4">
         {session?.user && (
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2 bg-white/50 dark:bg-gray-800/50 rounded-full px-3 py-2 backdrop-blur-sm">
@@ -50,6 +57,50 @@ export function Header() {
           </div>
         )}
         <ThemeToggle />
+      </div>
+
+      {/* Mobile Menu */}
+      <div className="md:hidden">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="h-6 w-6" />
+              <span className="sr-only">Open menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent>
+            <div className="flex flex-col space-y-6 pt-6">
+              {session?.user && (
+                <>
+                  <div className="flex items-center space-x-3 px-4">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={session.user.image || undefined} />
+                      <AvatarFallback>
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{session.user.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{session.user.email}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                    className="w-full justify-start px-4 text-base"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign Out</span>
+                  </Button>
+                </>
+              )}
+              <div className="flex items-center justify-between px-4">
+                <span className="text-base">Theme</span>
+                <ThemeToggle />
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </header>
   )
