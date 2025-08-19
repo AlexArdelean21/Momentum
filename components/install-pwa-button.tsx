@@ -87,6 +87,12 @@ export function InstallPWAButton() {
           </DialogHeader>
           
           <div className="space-y-4 pt-4">
+            {/* Important notice */}
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg dark:bg-amber-950/50 dark:border-amber-800">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                <strong>Important:</strong> Make sure you're logged in and on your dashboard before installing. This ensures the app opens to your activities, not the login page.
+              </p>
+            </div>
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
                 1
