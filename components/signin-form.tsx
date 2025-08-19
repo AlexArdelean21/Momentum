@@ -12,6 +12,7 @@ import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { InstallPWAButton } from "@/components/install-pwa-button"
 
 export default function SignInForm() {
   const [email, setEmail] = useState("")
@@ -160,6 +161,8 @@ export default function SignInForm() {
                 Sign up
               </Link>
             </div>
+            
+            <InstallPWAButton />
           </CardContent>
         </Card>
       </motion.div>
