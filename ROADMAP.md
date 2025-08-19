@@ -3,64 +3,95 @@
 This document outlines the necessary steps to complete the multi-user functionality, prepare the app for initial user feedback, and explore future enhancements.
 
 ---
+🧩 Feature 1: PWA Support
 
-## Phase 1: Complete Multi-User Functionality (Critical Priority)
+Goal: Convert the Momentum web app into a Progressive Web App so it can be installed and run like a native app.
 
-**Goal:** Ensure the application is fully multi-tenant, meaning each user's data is completely isolated and private. This is the most critical step before letting anyone use the app.
+Tasks:
 
-1.  **Modernize Authentication (`next-auth` v5):**
-    *   **Action:** Refactor `lib/auth.ts` to use the latest `next-auth` (v5) patterns. Instead of exporting `authOptions`, it should export `handlers`, `auth`, `signIn`, and `signOut`.
-    *   **Action:** Update the route handler at `app/api/auth/[...nextauth]/route.ts` to use the new `handlers` export from `lib/auth.ts`.
-    *   **Why:** This aligns the project with the latest Next.js 14 App Router conventions, making authentication easier to manage and more secure.
+Create manifest.json with app metadata (name, icon, theme color, etc.)
 
-2.  **Implement User-Scoped Server Actions:**
-    *   **Action:** Refactor all database functions in `lib/actions.ts`.
-    *   **Action:** In each function, use the `auth()` function (from your updated `lib/auth.ts`) to get the current user's session.
-    *   **Action:** If there is no session, throw an error to prevent unauthorized access.
-    *   **Action:** **Crucially**, replace the hardcoded `DEFAULT_USER_ID` with the logged-in user's ID (`session.user.id`) in all SQL queries.
-    *   **Why:** This is the core of data privacy. It ensures users can only create, view, edit, or delete their own activities.
+Add appropriate icons (192x192 and 512x512) to /public
 
-3.  **Implement User-Scoped Data Fetching:**
-    *   **Action:** Review how data is fetched on the main page (`app/page.tsx`) and in components like `activity-dashboard.tsx`.
-    *   **Action:** Ensure that any function responsible for fetching data (e.g., in `lib/database.ts`) is passed the user's ID and uses it in a `WHERE user_id = ...` clause.
-    *   **Why:** This prevents one user's data from ever being accidentally displayed to another.
+Configure next.config.js using next-pwa
 
----
+Generate and register a service-worker.js
 
-## Phase 2: Polish the User Experience
+Add <link rel="manifest"> and meta tags in _document.tsx
 
-**Goal:** Make the app feel intuitive, stable, and polished for your first users.
+Add logic for beforeinstallprompt event and a visible Download App button
 
-1.  **Update UI for a Multi-User World:**
-    *   **Action:** Modify the `components/header.tsx` to display the current user's name or avatar.
-    *   **Action:** Add a "Sign Out" button to the header that uses the `signOut` function from `next-auth`.
-    *   **Action:** Flesh out the `app/profile/page.tsx` to show basic user information and perhaps some personal stats.
+Outcome: Users can install the app with a single click. Enables offline support and future notification capabilities.
 
-2.  **Refine Onboarding and Empty States:**
-    *   **Action:** Design a welcoming "empty state" for new users who haven't created any habits yet. This should appear on the main dashboard.
-    *   **Action:** Include a clear call-to-action, like a button or a prompt, guiding them to create their first habit.
+🧩 Feature 2: Advanced Activity System (Project-Based Activities)
 
-3.  **Improve Error Handling and User Feedback:**
-    *   **Action:** Integrate a notification library like `sonner` (which you already have) to provide user-facing feedback.
-    *   **Action:** Show success messages (e.g., "Habit created successfully!") and clear error messages (e.g., "Failed to create habit. Please try again.").
-    *   **Why:** This makes the app feel more responsive and keeps users informed about what's happening.
+Goal: Replace or enhance the current flat activity system to support multi-step structured activities that track incremental progress throughout the day.
 
----
+Design:
 
-## Phase 3: Pre-Deployment & Feedback Gathering
+Introduce a new entity type: ProjectActivity
 
-**Goal:** Prepare the application for a smooth deployment and easy feedback collection.
+Each ProjectActivity includes:
 
-1.  **Conduct Thorough Multi-User Testing:**
-    *   **Action:** Create at least two separate user accounts (e.g., `user-a@test.com` and `user-b@test.com`).
-    *   **Action:** Log in as User A, create/edit/delete several habits. Log out.
-    *   **Action:** Log in as User B and verify that you **cannot** see any of User A's data. Perform the same actions.
-    *   **Action:** Test both Google Sign-In and email/password sign-in flows.
+A name (e.g., “Fitness Routine”)
 
-2.  **Finalize Environment and Documentation:**
-    *   **Action:** Create a `.env.example` file that lists all required environment variables (`DATABASE_URL`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, etc.) without their values.
-    *   **Action:** Update the `README.md` file's "Database Schema" section to include the `users` table and the `user_id` foreign key columns in the `activities` and `activity_logs` tables.
+A list of sub-tasks or targets (e.g., 100 pushups, 100 squats, 10km run)
 
+Optional labels like repeatsToday: true, progressRequired: true, etc.
+
+User Flow:
+
+User creates a ProjectActivity with subtasks and target values
+
+Throughout the day, the user logs partial completions (e.g., “+50 pushups” in the morning, “+50” in the evening)
+
+When all targets are met → mark as completed for the day → streak updates
+
+Tasks:
+
+Create ProjectActivity schema/model (backend + database migration)
+
+Build UI to create multi-step activities with targets
+
+Allow users to log partial progress on subtasks
+
+Aggregate progress and update streaks accordingly
+
+Allow editing or undoing progress per sub-task
+
+Display progress visually in the dashboard (e.g., progress bars)
+
+Outcome: Supports flexible, real-life goal tracking, not just binary "done/not done" actions.
+
+🧩 Feature 3: Push Notifications
+
+Goal: Implement browser push notifications to remind users to complete daily activities or celebrate achievements.
+
+Requirements:
+
+PWA support enabled (✅)
+
+Service Worker correctly registered
+
+User must grant notification permissions
+
+Notifications can be:
+
+Scheduled (e.g., “Reminder: Complete your tasks today”)
+
+Triggered (e.g., “You’ve completed your goal!”)
+
+Tasks:
+
+Ask for browser notification permission
+
+Use the Notifications API + Service Worker to send messages
+
+Integrate notifications with activity logic (trigger reminders, streak alerts, milestone celebrations)
+
+Optionally use localStorage or server-side data to determine when reminders are needed
+
+Bonus: Implement notification scheduling (e.g., remind at 8 PM if goals aren’t done)
 ---
 
 ## Phase 4: Future Ideas (Making it Great)
