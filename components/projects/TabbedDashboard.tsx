@@ -5,6 +5,7 @@ import { motion, PanInfo } from "framer-motion"
 import { TabBar } from "@/components/dashboard/TabBar"
 import { AddActivityButton } from "@/components/add-activity-button"
 import { AddProjectModal } from "@/components/projects/AddProjectModal"
+import { ProjectModal } from "@/components/projects/ProjectModal"
 import { useRouter } from "next/navigation"
 import { getProjectDashboardData } from "@/app/(actions)/projects"
 import { useEffect } from "react"
@@ -18,6 +19,7 @@ export function TabbedDashboard({ activitiesSlot }: { activitiesSlot: React.Reac
   const [active, setActive] = useState<"activities" | "projects">("activities")
   const [openProjectModal, setOpenProjectModal] = useState(false)
   const [projects, setProjects] = useState<Project[] | null>(null)
+  const [editProjectId, setEditProjectId] = useState<string | null>(null)
   const createdProjectIdRef = useRef<string | null>(null)
 
   // Load projects on mount and when switching to projects tab
@@ -67,7 +69,7 @@ export function TabbedDashboard({ activitiesSlot }: { activitiesSlot: React.Reac
             ) : (
               <ProjectList
                 projects={projects!}
-                onEdit={(proj) => setOpenProjectModal(true)}
+                onEdit={(proj) => setEditProjectId(proj.id)}
                 onDeleted={async () => {
                   const data = await getProjectDashboardData()
                   setProjects(data)
@@ -96,6 +98,17 @@ export function TabbedDashboard({ activitiesSlot }: { activitiesSlot: React.Reac
               createdProjectIdRef.current = null
             }
           }, 50)
+        }}
+      />
+
+      <ProjectModal
+        mode="edit"
+        projectId={editProjectId || undefined}
+        open={!!editProjectId}
+        onOpenChange={(open) => { if (!open) setEditProjectId(null) }}
+        onCreatedOrUpdated={async () => {
+          const data = await getProjectDashboardData()
+          setProjects(data)
         }}
       />
     </section>

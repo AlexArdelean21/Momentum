@@ -41,6 +41,8 @@ export function ProjectList({ projects, onEdit, onDeleted }: { projects: Project
                   projectId={p.id}
                   subtasks={p.subtasks}
                   last7={p.last7}
+                  last7Totals={p.last7Totals}
+                  description={(p as any).description}
                   onUpdated={async () => {
                     const data = await getProjectDashboardData()
                     // keep currently expanded id

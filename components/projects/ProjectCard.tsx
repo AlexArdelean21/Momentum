@@ -2,9 +2,9 @@
 
 import { cn } from "@/lib/utils"
 import { ProjectRadialFuel } from "./ProjectRadialFuel"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
-import { useState, type ReactNode } from "react"
+import { type ReactNode } from "react"
 import { AnimatePresence, motion } from "framer-motion"
+import { ProjectMenu } from "./ProjectMenu"
 
 type Props = {
   name: string
@@ -20,7 +20,6 @@ type Props = {
 }
 
 export function ProjectCard({ name, emoji, progressPct, isCompletedToday, last7, onEdit, onDelete, isExpanded, onToggle, children }: Props) {
-  const [menuOpen, setMenuOpen] = useState(false)
   return (
     <div className={cn(
       "backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-[0_2px_30px_rgba(255,80,20,0.08)]",
@@ -55,56 +54,12 @@ export function ProjectCard({ name, emoji, progressPct, isCompletedToday, last7,
           </div>
         </div>
         {(onEdit || onDelete) && (
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              className="p-2 rounded-lg hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
-              aria-label="Project menu"
-              onClick={(e) => {
-                e.stopPropagation()
-                e.preventDefault()
-                setMenuOpen((o) => !o)
-              }}
-              title="Menu"
-            >
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 mt-2 w-36 rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl z-10">
-                {onEdit && (
-                  <button
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 flex items-center gap-2"
-                    onClick={(e) => {
-                      e.stopPropagation(); e.preventDefault(); setMenuOpen(false); onEdit()
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" /> Edit
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 text-red-400 flex items-center gap-2"
-                    onClick={(e) => {
-                      e.stopPropagation(); e.preventDefault(); setMenuOpen(false); if (confirm("Delete project?")) onDelete()
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" /> Delete
-                  </button>
-                )}
-              </div>
-            )}
+          <div className="relative shrink-0" onClick={(e) => { e.stopPropagation() }} onMouseDown={(e) => { e.stopPropagation() }}>
+            <ProjectMenu onEdit={onEdit} onDelete={onDelete} />
           </div>
         )}
       </div>
-      {last7 && last7.length > 0 && (
-        <div className="mt-3 flex items-center gap-1">
-          {last7.map((d) => (
-            <div key={d.day} className={cn("h-3 w-3 rounded-[3px]", d.completed ? "bg-white/80" : "border border-white/20")}
-              title={`${d.day}: ${d.completed ? "Completed" : "Missed"}`}
-            />
-          ))}
-        </div>
-      )}
+      {/* Removed header squares to avoid duplicates; chart shows in details panel */}
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div

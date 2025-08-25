@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { startOfLocalDay, isoDay } from "@/lib/date"
 import { recomputeProjectDailyStatus } from "@/lib/projects/aggregate"
 import { Decimal } from "@prisma/client/runtime/library"
+import { revalidatePath } from "next/cache"
 
 const subtaskInput = z.object({
   id: z.string().cuid().optional(),
@@ -71,6 +72,119 @@ export async function createProjectActivity(input: z.infer<typeof createProjectS
   })
 
   return { id: result.id }
+}
+
+const getProjectForEditSchema = z.object({ projectId: z.string().cuid() })
+
+export async function getProjectForEdit(input: z.infer<typeof getProjectForEditSchema>): Promise<{
+  id: string
+  name: string
+  emoji?: string
+  description?: string
+  subtasks: Array<{ id: string; name: string; target: number; unit?: string; order?: number }>
+} | null> {
+  const session = await auth()
+  const userId = session?.user?.id
+  if (!userId) return null
+
+  const parsed = getProjectForEditSchema.safeParse(input)
+  if (!parsed.success) throw parsed.error
+
+  const proj = await prisma.projectActivity.findFirst({
+    where: { id: parsed.data.projectId, userId },
+    include: { subtasks: { orderBy: { order: "asc" } } },
+  })
+  if (!proj) return null
+
+  return {
+    id: proj.id,
+    name: proj.name,
+    emoji: proj.emoji || undefined,
+    description: (proj as any).description || undefined,
+    subtasks: proj.subtasks.map((s) => ({
+      id: s.id,
+      name: s.name,
+      target: Number(s.target as any),
+      unit: s.unit || undefined,
+      order: s.order ?? 0,
+    })),
+  }
+}
+
+const updateProjectSchema = z.object({
+  projectId: z.string().cuid(),
+  name: z.string().min(1).max(255),
+  description: z.string().max(1000).optional(),
+  emoji: z.string().max(10).optional(),
+  subtasks: z.array(subtaskInput),
+})
+
+export async function updateProject(input: z.infer<typeof updateProjectSchema>): Promise<{ id: string }> {
+  console.log("[updateProject]", input?.projectId)
+  const session = await auth()
+  const userId = session?.user?.id
+  if (!userId) throw new Error("Not authenticated")
+
+  const parsed = updateProjectSchema.safeParse(input)
+  if (!parsed.success) throw parsed.error
+
+  const { projectId, name, description, emoji, subtasks } = parsed.data
+
+  await prisma.$transaction(async (tx) => {
+    // Ensure ownership
+    const existing = await tx.projectActivity.findFirst({ where: { id: projectId, userId }, include: { subtasks: true } })
+    if (!existing) throw new Error("Project not found or access denied")
+
+    await tx.projectActivity.update({
+      where: { id: projectId },
+      data: { name, description, emoji },
+    })
+
+    const existingById = new Map(existing.subtasks.map((s) => [s.id, s]))
+    const payloadIds = new Set<string>()
+
+    // Upsert provided subtasks
+    for (const [index, s] of subtasks.entries()) {
+      if (s.id && existingById.has(s.id)) {
+        payloadIds.add(s.id)
+        await tx.projectSubtask.update({
+          where: { id: s.id },
+          data: {
+            name: s.name,
+            target: new Decimal(s.target),
+            unit: s.unit || undefined,
+            order: s.order ?? index,
+          },
+        })
+      } else {
+        const created = await tx.projectSubtask.create({
+          data: {
+            projectId,
+            name: s.name,
+            target: new Decimal(s.target),
+            unit: s.unit || undefined,
+            order: s.order ?? index,
+          },
+        })
+        payloadIds.add(created.id)
+      }
+    }
+
+    // Delete missing subtasks
+    for (const s of existing.subtasks) {
+      if (!payloadIds.has(s.id)) {
+        await tx.projectSubtask.delete({ where: { id: s.id } })
+      }
+    }
+  })
+
+  // Invalidate any project lists
+  try {
+    revalidatePath("/")
+    revalidatePath("/projects")
+  } catch {}
+
+  return { id: parsed.data.projectId }
 }
 
 const upsertSubtasksSchema = z.object({
@@ -187,11 +301,13 @@ export async function deleteProjectActivity(input: z.infer<typeof deleteProjectS
 export async function getProjectDashboardData(): Promise<Array<{
   id: string
   name: string
+  description?: string
   emoji?: string
   progressPct: number
   isCompletedToday: boolean
   subtasks: Array<{ id: string; name: string; target: number; unit?: string; todayTotal: number }>
   last7: Array<{ day: string; completed: boolean }>
+  last7Totals: Array<{ date: string; total: number }>
 }>> {
   console.log("[getProjectDashboardData]")
   const session = await auth()
@@ -236,22 +352,34 @@ export async function getProjectDashboardData(): Promise<Array<{
     })
 
     const last7: Array<{ day: string; completed: boolean }> = []
+    const last7Totals: Array<{ date: string; total: number }> = []
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today)
       d.setDate(today.getDate() - i)
       const dayKey = isoDay(d)
       const dayStatus = p.daily.find((ds) => isoDay(ds.date) === dayKey)
       last7.push({ day: dayKey, completed: !!dayStatus?.isCompleted })
+      let total = 0
+      if (dayStatus && (dayStatus as any).totals) {
+        const t: Record<string, any> = (dayStatus as any).totals
+        for (const k of Object.keys(t)) {
+          const v = t[k]
+          total += Number(typeof v === "object" && "toNumber" in (v as any) ? (v as any).toNumber() : v)
+        }
+      }
+      last7Totals.push({ date: dayKey, total: Math.max(0, total) })
     }
 
     return {
       id: p.id,
       name: p.name,
+      description: (p as any).description || undefined,
       emoji: p.emoji || undefined,
       progressPct,
       isCompletedToday,
       subtasks,
       last7,
+      last7Totals,
     }
   })
 }
