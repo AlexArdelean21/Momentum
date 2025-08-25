@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "NODE_OPTIONS='--enable-source-maps' next start",
+    "postinstall": "prisma generate",
     "lint": "next lint",
     "prisma:migrate": "prisma migrate dev -n projects_feature_initial",
     "prisma:generate": "prisma generate",

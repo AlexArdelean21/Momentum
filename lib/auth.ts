@@ -4,29 +4,28 @@ import { neon } from "@neondatabase/serverless"
 import bcrypt from "bcryptjs"
 import { User } from "./types"
 
-// New, simpler diagnostic log
-console.log("=============================================");
-console.log("✅ [auth.ts] This log is from the top level of lib/auth.ts");
-console.log("✅ [auth.ts] If you see this in DEPLOY logs, the module was imported.");
-console.log("=============================================");
+if (process.env.NODE_ENV === "development") {
+  console.log("=============================================");
+  console.log("✅ [auth.ts] This log is from the top level of lib/auth.ts");
+  console.log("✅ [auth.ts] If you see this in DEPLOY logs, the module was imported.");
+  console.log("=============================================");
+}
 
 const sql = neon(process.env.DATABASE_URL!)
 
-// Add this self-invoking function to test the DB connection on startup
-;(async () => {
-  try {
-    console.log("🚀 [auth.ts] Testing database connection...")
-    await sql`SELECT 1`
-    console.log("✅ [auth.ts] Database connection successful.")
-  } catch (error) {
-    console.error("❌ [auth.ts] DATABASE CONNECTION FAILED:", error)
-    // This will force the application to crash with a clear error
-    // if the database is unreachable, making it visible in Railway logs.
-    process.exit(1)
-  }
-})()
+if (process.env.NODE_ENV === "development") {
+  ;(async () => {
+    try {
+      console.log("🚀 [auth.ts] Testing database connection...")
+      await sql`SELECT 1`
+      console.log("✅ [auth.ts] Database connection successful.")
+    } catch (error) {
+      console.error("❌ [auth.ts] DATABASE CONNECTION FAILED:", error)
+    }
+  })()
 
-console.log("🚀 [auth.ts] NEXTAUTH_URL read by server:", process.env.NEXTAUTH_URL)
+  console.log("🚀 [auth.ts] NEXTAUTH_URL read by server:", process.env.NEXTAUTH_URL)
+}
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-key-for-development-only",
