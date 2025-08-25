@@ -14,14 +14,13 @@ export function ProjectList({ projects, onEdit, onDeleted }: { projects: Project
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {projects.map((p) => (
-        <div key={p.id} className="space-y-2">
-          <div onClick={() => setExpandedId((id) => (id === p.id ? null : p.id))} className="cursor-pointer">
+        <div key={p.id} className="space-y-2" data-project-id={p.id}>
+          <div className="cursor-pointer">
             <ProjectCard
               name={p.name}
               emoji={p.emoji}
               progressPct={p.progressPct}
               isCompletedToday={p.isCompletedToday}
-              href={`/projects/${p.id}`}
               last7={p.last7}
               onEdit={() => onEdit(p)}
               onDelete={async () => {
@@ -33,7 +32,11 @@ export function ProjectList({ projects, onEdit, onDeleted }: { projects: Project
                   toast.error(e?.message || "Failed to delete project")
                 }
               }}
-            />
+              isExpanded={expandedId === p.id}
+              onToggle={() => setExpandedId((id) => (id === p.id ? null : p.id))}
+            >
+              <div className="text-sm text-foreground/80">Details coming soon… subtasks, quick log, etc.</div>
+            </ProjectCard>
           </div>
           <AnimatePresence initial={false}>
             {expandedId === p.id && (
@@ -41,9 +44,9 @@ export function ProjectList({ projects, onEdit, onDeleted }: { projects: Project
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-[0_2px_30px_rgba(255,80,20,0.08)] p-4"
+                className="hidden"
               >
-                <div className="text-sm text-foreground/80">Details coming soon… subtasks, quick log, etc.</div>
+                
               </motion.div>
             )}
           </AnimatePresence>

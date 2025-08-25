@@ -1,23 +1,24 @@
 "use client"
 
-import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { ProjectRadialFuel } from "./ProjectRadialFuel"
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 
 type Props = {
   name: string
   emoji?: string
   progressPct: number
   isCompletedToday: boolean
-  href: string
   last7?: Array<{ day: string; completed: boolean }>
   onEdit?: () => void
   onDelete?: () => void
+  isExpanded?: boolean
+  onToggle?: () => void
+  children?: ReactNode
 }
 
-export function ProjectCard({ name, emoji, progressPct, isCompletedToday, href, last7, onEdit, onDelete }: Props) {
+export function ProjectCard({ name, emoji, progressPct, isCompletedToday, last7, onEdit, onDelete, isExpanded, onToggle, children }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   return (
     <div className={cn(
@@ -26,24 +27,24 @@ export function ProjectCard({ name, emoji, progressPct, isCompletedToday, href, 
     )}>
       <div className="flex items-center gap-4">
         <div className="shrink-0">
-          <Link href={href} aria-label={`${name} progress ${(progressPct * 100).toFixed(0)}%`} role="link" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-full">
+          <button aria-label={`${name} progress ${(progressPct * 100).toFixed(0)}%`} onClick={onToggle} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-full">
             <ProjectRadialFuel value={progressPct} aria-label="Fuel meter" />
-          </Link>
+          </button>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <Link href={href} className="text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded" aria-hidden>
+            <button onClick={onToggle} className="text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded" aria-hidden>
               {emoji || "🧩"}
-            </Link>
+            </button>
             {isCompletedToday && (
               <span className="bg-gradient-to-br from-[#FF7A18] via-[#FF3D54] to-[#FFB800] text-[10px] px-2 py-0.5 rounded-full text-white">
                 Completed • today
               </span>
             )}
           </div>
-          <Link href={href} className="mt-1 font-medium truncate block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded">
+          <button onClick={onToggle} className="mt-1 font-medium truncate block text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded">
             {name}
-          </Link>
+          </button>
         </div>
         {(onEdit || onDelete) && (
           <div className="relative shrink-0">
@@ -96,6 +97,13 @@ export function ProjectCard({ name, emoji, progressPct, isCompletedToday, href, 
           ))}
         </div>
       )}
+      <div className={cn("overflow-hidden transition-all", isExpanded ? "max-h-[1200px] opacity-100 mt-3" : "max-h-0 opacity-0")}
+        aria-hidden={!isExpanded}
+      >
+        <div className="pt-3 border-t border-white/10">
+          {children}
+        </div>
+      </div>
     </div>
   )
 }

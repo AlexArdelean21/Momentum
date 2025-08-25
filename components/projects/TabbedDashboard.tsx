@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { motion, PanInfo } from "framer-motion"
 import { TabBar } from "@/components/dashboard/TabBar"
 import { AddActivityButton } from "@/components/add-activity-button"
@@ -18,6 +18,7 @@ export function TabbedDashboard({ activitiesSlot }: { activitiesSlot: React.Reac
   const [active, setActive] = useState<"activities" | "projects">("activities")
   const [openProjectModal, setOpenProjectModal] = useState(false)
   const [projects, setProjects] = useState<Project[] | null>(null)
+  const createdProjectIdRef = useRef<string | null>(null)
 
   // Load projects on mount and when switching to projects tab
   useEffect(() => {
@@ -81,9 +82,20 @@ export function TabbedDashboard({ activitiesSlot }: { activitiesSlot: React.Reac
         open={openProjectModal}
         onOpenChange={setOpenProjectModal}
         mode="create"
-        onCreatedOrUpdated={async () => {
+        onCreatedOrUpdated={async (createdId) => {
+          if (createdId) createdProjectIdRef.current = createdId
+          setActive("projects")
           const data = await getProjectDashboardData()
           setProjects(data)
+          setTimeout(() => {
+            if (createdProjectIdRef.current) {
+              const el = document.querySelector(`[data-project-id="${createdProjectIdRef.current}"]`)
+              if (el && "scrollIntoView" in el) {
+                ;(el as HTMLElement).scrollIntoView({ behavior: "smooth", block: "center" })
+              }
+              createdProjectIdRef.current = null
+            }
+          }, 50)
         }}
       />
     </section>
