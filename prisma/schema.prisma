@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider           = "postgresql"
+  url                = env("DATABASE_URL")           
+  directUrl          = env("DATABASE_URL_UNPOOLED")   
+  shadowDatabaseUrl  = env("SHADOW_DATABASE_URL")    
+}
+
+/* ───────── Existing tables rewritten as singular models ───────── */
+
+model Activity {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String       @db.VarChar(255)
+  emoji       String?      @default("🎯") @db.VarChar(10)
+  description String?
+  createdAt   DateTime?    @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime?    @default(now()) @map("updated_at") @db.Timestamp(6)
+  userId      String       @map("user_id") @db.Uuid
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  logs        ActivityLog[]
+
+  @@index([userId], map: "idx_activities_user_id")
+  @@map("activities")
+}
+
+model ActivityLog {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  activityId String    @map("activity_id") @db.Uuid
+  date       DateTime  @db.Date
+  count      Int?      @default(1)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  userId     String    @map("user_id") @db.Uuid
+  activity   Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([activityId, date])
+  @@index([activityId], map: "idx_activity_logs_activity_id")
+  @@index([date], map: "idx_activity_logs_date")
+  @@index([userId], map: "idx_activity_logs_user_id")
+  @@map("activity_logs")
+}
+
+model User {
+  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String?      @db.VarChar(255)
+  email        String       @unique @db.VarChar(255)
+  passwordHash String?      @map("password_hash") @db.VarChar(255)
+  avatarUrl    String?      @map("avatar_url")
+  provider     String?      @default("credentials") @db.VarChar(50)
+  providerId   String?      @map("provider_id") @db.VarChar(255)
+  createdAt    DateTime?    @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime?    @default(now()) @map("updated_at") @db.Timestamp(6)
+  activities   Activity[]
+  activityLogs ActivityLog[]
+
+  @@index([email], map: "idx_users_email")
+  @@index([provider], map: "idx_users_provider")
+  @@index([providerId], map: "idx_users_provider_id")
+  @@map("users")
+}
+
+/* ───────── New Project-based activity models ───────── */
+
+model ProjectActivity {
+  id               String   @id @default(cuid())
+  userId           String   // references users.id (UUID stored as string)
+  name             String   @db.VarChar(255)
+  description      String?
+  emoji            String?  @db.VarChar(10)
+  progressRequired Boolean  @default(true)
+  repeatsToday     Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  subtasks ProjectSubtask[]
+  logs     ProjectProgressLog[]
+  daily    ProjectDailyStatus[]
+
+  @@unique([userId, name])
+}
+
+model ProjectSubtask {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String   @db.VarChar(100)
+  target    Decimal  @db.Decimal(10, 2)   // supports reps, km, minutes, etc.
+  unit      String?  @db.VarChar(20)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project ProjectActivity      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  logs    ProjectProgressLog[] // back-relation required by Prisma
+
+  @@index([projectId])
+}
+
+model ProjectProgressLog {
+  id        String   @id @default(cuid())
+  projectId String
+  subtaskId String
+  date      DateTime            // bucketed at start of user's local day
+  delta     Decimal  @db.Decimal(10, 2) // positive or negative increments
+  note      String?
+  createdAt DateTime @default(now())
+
+  project ProjectActivity @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subtask ProjectSubtask  @relation(fields: [subtaskId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, date])
+  @@index([subtaskId, date])
+}
+
+model ProjectDailyStatus {
+  id          String   @id @default(cuid())
+  projectId   String
+  date        DateTime
+  totals      Json                       // { [subtaskId]: "decimal-string" }
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project ProjectActivity @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, date])
+  @@index([projectId, date])
+}

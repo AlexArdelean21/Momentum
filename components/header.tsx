@@ -4,12 +4,13 @@ import { useSession, signOut } from "next-auth/react"
 import { ThemeToggle } from "./theme-toggle"
 import { Button } from "./ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
-import { Flame, LogOut, User, Menu } from "lucide-react"
+import { Flame, LogOut, User, Menu, FolderKanban } from "lucide-react"
 import {
   Sheet,
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import Link from "next/link"
 
 export function Header() {
   const { data: session } = useSession()
@@ -32,6 +33,10 @@ export function Header() {
 
       {/* Desktop Menu */}
       <div className="hidden md:flex items-center space-x-4">
+        <Link href="/projects" className="text-sm text-foreground/80 hover:text-foreground inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10">
+          <FolderKanban className="h-4 w-4" />
+          <span>Projects</span>
+        </Link>
         {session?.user && (
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2 bg-white/50 dark:bg-gray-800/50 rounded-full px-3 py-2 backdrop-blur-sm">
@@ -70,6 +75,10 @@ export function Header() {
           </SheetTrigger>
           <SheetContent>
             <div className="flex flex-col space-y-6 pt-6">
+              <Link href="/projects" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10">
+                <FolderKanban className="h-4 w-4" />
+                <span>Projects</span>
+              </Link>
               {session?.user && (
                 <>
                   <div className="flex items-center space-x-3 px-4">

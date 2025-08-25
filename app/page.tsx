@@ -7,6 +7,7 @@ import { AddActivityButton } from "@/components/add-activity-button"
 import { TodaySummary } from "@/components/today-summary"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { DatabaseStatus } from "@/components/database-status"
+import { ProjectsTeaser } from "@/components/projects/ProjectsTeaser"
 
 export default async function Home() {
   const session = await auth()
@@ -40,6 +41,12 @@ export default async function Home() {
 
         <Suspense fallback={<LoadingSpinner />}>
           <ActivityDashboard />
+        </Suspense>
+
+        {/* Projects teaser */}
+        <Suspense fallback={<div className="h-24" />}>
+          {/* @ts-expect-error Server Component */}
+          <ProjectsTeaser />
         </Suspense>
       </div>
     </div>

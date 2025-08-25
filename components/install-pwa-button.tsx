@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useInstallPrompt } from '@/lib/hooks/use-install-prompt'
 import { Download, Smartphone, Share, Plus } from 'lucide-react'
@@ -50,9 +51,10 @@ export function InstallPWAButton() {
       <Button
         onClick={handleInstallClick}
         disabled={isInstalling}
-        variant="outline"
-        size="sm"
-        className="w-full mt-4 border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950 dark:hover:text-orange-300"
+        className={cn(
+          buttonVariants({ variant: "outline", size: "sm" }),
+          "w-full mt-4 border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950 dark:hover:text-orange-300"
+        )}
       >
         {isInstalling ? (
           <div className="flex items-center space-x-2">

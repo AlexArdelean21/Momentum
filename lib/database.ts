@@ -40,32 +40,69 @@ export async function initializeDatabase() {
 export async function getActivities(): Promise<Activity[]> {
   try {
     const userId = await getCurrentUser()
+    // Debug: confirm DB and user context
+    try {
+      const dbInfo = await sql`SELECT current_database() as db, current_user as db_user`
+      console.log("[getActivities] DB:", dbInfo[0]?.db, "DB User:", dbInfo[0]?.db_user, "UserId:", userId)
+    } catch (e) {
+      console.log("[getActivities] Failed to read DB info")
+    }
     const today = new Date().toISOString().split("T")[0]
 
-    const activities = await sql`
-      SELECT 
-        a.id,
-        a.name,
-        a.emoji,
-        a.description,
-        a.created_at,
-        COALESCE(today_log.count, 0) as today_count,
-        COALESCE(total_stats.total_days, 0) as total_days,
-        calculate_current_streak(a.id) as current_streak,
-        calculate_best_streak(a.id) as best_streak
-      FROM activities a
-      LEFT JOIN activity_logs today_log ON a.id = today_log.activity_id AND today_log.date = ${today}
-      LEFT JOIN (
+    let activities
+    try {
+      activities = await sql`
         SELECT 
-          activity_id,
-          COUNT(DISTINCT date) as total_days
-        FROM activity_logs 
-        WHERE count > 0
-        GROUP BY activity_id
-      ) total_stats ON a.id = total_stats.activity_id
-      WHERE a.user_id = ${userId}
-      ORDER BY a.created_at DESC
-    `
+          a.id,
+          a.name,
+          a.emoji,
+          a.description,
+          a.created_at,
+          COALESCE(today_log.count, 0) as today_count,
+          COALESCE(total_stats.total_days, 0) as total_days,
+          calculate_current_streak(a.id) as current_streak,
+          calculate_best_streak(a.id) as best_streak
+        FROM activities a
+        LEFT JOIN activity_logs today_log ON a.id = today_log.activity_id AND today_log.date = ${today}
+        LEFT JOIN (
+          SELECT 
+            activity_id,
+            COUNT(DISTINCT date) as total_days
+          FROM activity_logs 
+          WHERE count > 0
+          GROUP BY activity_id
+        ) total_stats ON a.id = total_stats.activity_id
+        WHERE a.user_id = ${userId}
+        ORDER BY a.created_at DESC
+      `
+    } catch (err) {
+      console.warn("[getActivities] Streak functions missing, using fallback query")
+      activities = await sql`
+        SELECT 
+          a.id,
+          a.name,
+          a.emoji,
+          a.description,
+          a.created_at,
+          COALESCE(today_log.count, 0) as today_count,
+          COALESCE(total_stats.total_days, 0) as total_days,
+          0 as current_streak,
+          0 as best_streak
+        FROM activities a
+        LEFT JOIN activity_logs today_log ON a.id = today_log.activity_id AND today_log.date = ${today}
+        LEFT JOIN (
+          SELECT 
+            activity_id,
+            COUNT(DISTINCT date) as total_days
+          FROM activity_logs 
+          WHERE count > 0
+          GROUP BY activity_id
+        ) total_stats ON a.id = total_stats.activity_id
+        WHERE a.user_id = ${userId}
+        ORDER BY a.created_at DESC
+      `
+    }
+    console.log("[getActivities] rows:", activities.length)
 
     return activities.map((row) => ({
       id: row.id,

@@ -1,31 +1,12 @@
 # 🔥 Momentum - Project Roadmap
+npx prisma studio
 
 This document outlines the necessary steps to complete the multi-user functionality, prepare the app for initial user feedback, and explore future enhancements.
 
----
-🧩 Feature 1: PWA Support
-
-Goal: Convert the Momentum web app into a Progressive Web App so it can be installed and run like a native app.
-
-Tasks:
-
-Create manifest.json with app metadata (name, icon, theme color, etc.)
-
-Add appropriate icons (192x192 and 512x512) to /public
-
-Configure next.config.js using next-pwa
-
-Generate and register a service-worker.js
-
-Add <link rel="manifest"> and meta tags in _document.tsx
-
-Add logic for beforeinstallprompt event and a visible Download App button
-
-Outcome: Users can install the app with a single click. Enables offline support and future notification capabilities.
 
 🧩 Feature 2: Advanced Activity System (Project-Based Activities)
 
-Goal: Replace or enhance the current flat activity system to support multi-step structured activities that track incremental progress throughout the day.
+Goal: enhance the current flat activity system to support multi-step structured activities that track incremental progress throughout the day.
 
 Design:
 
