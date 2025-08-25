@@ -4,6 +4,7 @@ import { useState } from "react"
 import { ProjectCard } from "./ProjectCard"
 import { motion, AnimatePresence } from "framer-motion"
 import { getProjectDashboardData, deleteProjectActivity } from "@/app/(actions)/projects"
+import { ProjectDetails } from "@/components/projects/ProjectDetails"
 import { toast } from "sonner"
 
 type Project = Awaited<ReturnType<typeof getProjectDashboardData>>[number]
@@ -15,7 +16,7 @@ export function ProjectList({ projects, onEdit, onDeleted }: { projects: Project
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {projects.map((p) => (
         <div key={p.id} className="space-y-2" data-project-id={p.id}>
-          <div className="cursor-pointer">
+          <div>
             <ProjectCard
               name={p.name}
               emoji={p.emoji}
@@ -35,7 +36,21 @@ export function ProjectList({ projects, onEdit, onDeleted }: { projects: Project
               isExpanded={expandedId === p.id}
               onToggle={() => setExpandedId((id) => (id === p.id ? null : p.id))}
             >
-              <div className="text-sm text-foreground/80">Details coming soon… subtasks, quick log, etc.</div>
+              {expandedId === p.id ? (
+                <ProjectDetails
+                  projectId={p.id}
+                  subtasks={p.subtasks}
+                  last7={p.last7}
+                  onUpdated={async () => {
+                    const data = await getProjectDashboardData()
+                    // keep currently expanded id
+                    const keep = expandedId
+                    // naive: we don't replace projects prop here; parent passes it, so skip
+                  }}
+                />
+              ) : (
+                <div className="text-sm text-foreground/80">Details coming soon… subtasks, quick log, etc.</div>
+              )}
             </ProjectCard>
           </div>
           <AnimatePresence initial={false}>

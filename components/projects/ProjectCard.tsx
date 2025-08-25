@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 import { ProjectRadialFuel } from "./ProjectRadialFuel"
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
 import { useState, type ReactNode } from "react"
+import { AnimatePresence, motion } from "framer-motion"
 
 type Props = {
   name: string
@@ -25,26 +26,33 @@ export function ProjectCard({ name, emoji, progressPct, isCompletedToday, last7,
       "backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-[0_2px_30px_rgba(255,80,20,0.08)]",
       "p-4 sm:p-5 transition will-change-transform hover:-translate-y-0.5 hover:ring-1 hover:ring-white/10"
     )}>
-      <div className="flex items-center gap-4">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={!!isExpanded}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle?.() } }}
+        onClick={onToggle}
+        className="flex items-center gap-4 cursor-pointer"
+      >
         <div className="shrink-0">
-          <button aria-label={`${name} progress ${(progressPct * 100).toFixed(0)}%`} onClick={onToggle} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-full">
+          <div aria-label={`${name} progress ${(progressPct * 100).toFixed(0)}%`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-full">
             <ProjectRadialFuel value={progressPct} aria-label="Fuel meter" />
-          </button>
+          </div>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <button onClick={onToggle} className="text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded" aria-hidden>
+            <div className="text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded" aria-hidden>
               {emoji || "🧩"}
-            </button>
+            </div>
             {isCompletedToday && (
               <span className="bg-gradient-to-br from-[#FF7A18] via-[#FF3D54] to-[#FFB800] text-[10px] px-2 py-0.5 rounded-full text-white">
                 Completed • today
               </span>
             )}
           </div>
-          <button onClick={onToggle} className="mt-1 font-medium truncate block text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded">
+          <div className="mt-1 font-medium truncate block text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded">
             {name}
-          </button>
+          </div>
         </div>
         {(onEdit || onDelete) && (
           <div className="relative shrink-0">
@@ -97,13 +105,24 @@ export function ProjectCard({ name, emoji, progressPct, isCompletedToday, last7,
           ))}
         </div>
       )}
-      <div className={cn("overflow-hidden transition-all", isExpanded ? "max-h-[1200px] opacity-100 mt-3" : "max-h-0 opacity-0")}
-        aria-hidden={!isExpanded}
-      >
-        <div className="pt-3 border-t border-white/10">
-          {children}
-        </div>
-      </div>
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            id={`panel-${name}`}
+            role="region"
+            aria-label={`Project details: ${name}`}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="overflow-hidden mt-3"
+          >
+            <div className="pt-3 border-t border-white/10">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
