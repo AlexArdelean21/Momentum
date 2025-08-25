@@ -15,15 +15,17 @@ export function ProjectSubtaskRow({
   onChange,
   onRemove,
   disableRemove,
+  compact,
 }: {
   value: SubtaskValue
   onChange: (patch: Partial<SubtaskValue>) => void
   onRemove: () => void
   disableRemove?: boolean
+  compact?: boolean
 }) {
   return (
-    <div className="w-full">
-      <div className="flex items-start gap-2">
+    <div className={compact ? "w-full rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-700/20 p-3" : "w-full"}>
+      <div className={compact ? "flex items-start gap-2" : "flex items-start gap-2"}>
         <div className="flex-1 space-y-2">
           <Input
             value={value.name}
