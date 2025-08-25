@@ -166,6 +166,24 @@ export async function logProjectProgress(input: z.infer<typeof logProgressSchema
   return { currentTotals: (status?.totals as any) || {}, isCompleted: !!status?.isCompleted }
 }
 
+const deleteProjectSchema = z.object({ projectId: z.string().cuid() })
+
+export async function deleteProjectActivity(input: z.infer<typeof deleteProjectSchema>): Promise<void> {
+  console.log("[deleteProjectActivity]", input?.projectId)
+  const session = await auth()
+  const userId = session?.user?.id
+  if (!userId) throw new Error("Not authenticated")
+
+  const parsed = deleteProjectSchema.safeParse(input)
+  if (!parsed.success) throw parsed.error
+
+  // Ensure ownership
+  const proj = await prisma.projectActivity.findFirst({ where: { id: parsed.data.projectId, userId } })
+  if (!proj) throw new Error("Project not found or access denied")
+
+  await prisma.projectActivity.delete({ where: { id: parsed.data.projectId } })
+}
+
 export async function getProjectDashboardData(): Promise<Array<{
   id: string
   name: string

@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { ProjectRadialFuel } from "./ProjectRadialFuel"
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { useState } from "react"
 
 type Props = {
   name: string
@@ -11,34 +13,79 @@ type Props = {
   isCompletedToday: boolean
   href: string
   last7?: Array<{ day: string; completed: boolean }>
+  onEdit?: () => void
+  onDelete?: () => void
 }
 
-export function ProjectCard({ name, emoji, progressPct, isCompletedToday, href, last7 }: Props) {
+export function ProjectCard({ name, emoji, progressPct, isCompletedToday, href, last7, onEdit, onDelete }: Props) {
+  const [menuOpen, setMenuOpen] = useState(false)
   return (
-    <Link
-      href={href}
-      aria-label={`${name} progress ${(progressPct * 100).toFixed(0)}%`}
-      role="link"
-      className={cn(
-        "backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-[0_2px_30px_rgba(255,80,20,0.08)]",
-        "p-4 sm:p-5 transition will-change-transform hover:-translate-y-0.5 hover:ring-1 hover:ring-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
-      )}
-    >
+    <div className={cn(
+      "backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-[0_2px_30px_rgba(255,80,20,0.08)]",
+      "p-4 sm:p-5 transition will-change-transform hover:-translate-y-0.5 hover:ring-1 hover:ring-white/10"
+    )}>
       <div className="flex items-center gap-4">
         <div className="shrink-0">
-          <ProjectRadialFuel value={progressPct} aria-label="Fuel meter" />
+          <Link href={href} aria-label={`${name} progress ${(progressPct * 100).toFixed(0)}%`} role="link" className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded-full">
+            <ProjectRadialFuel value={progressPct} aria-label="Fuel meter" />
+          </Link>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <div className="text-2xl" aria-hidden>{emoji || "🧩"}</div>
+            <Link href={href} className="text-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded" aria-hidden>
+              {emoji || "🧩"}
+            </Link>
             {isCompletedToday && (
               <span className="bg-gradient-to-br from-[#FF7A18] via-[#FF3D54] to-[#FFB800] text-[10px] px-2 py-0.5 rounded-full text-white">
                 Completed • today
               </span>
             )}
           </div>
-          <div className="mt-1 font-medium truncate">{name}</div>
+          <Link href={href} className="mt-1 font-medium truncate block focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20 rounded">
+            {name}
+          </Link>
         </div>
+        {(onEdit || onDelete) && (
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              className="p-2 rounded-lg hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20"
+              aria-label="Project menu"
+              onClick={(e) => {
+                e.stopPropagation()
+                e.preventDefault()
+                setMenuOpen((o) => !o)
+              }}
+              title="Menu"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 mt-2 w-36 rounded-lg border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl z-10">
+                {onEdit && (
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 flex items-center gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation(); e.preventDefault(); setMenuOpen(false); onEdit()
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" /> Edit
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 text-red-400 flex items-center gap-2"
+                    onClick={(e) => {
+                      e.stopPropagation(); e.preventDefault(); setMenuOpen(false); if (confirm("Delete project?")) onDelete()
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {last7 && last7.length > 0 && (
         <div className="mt-3 flex items-center gap-1">
@@ -49,7 +96,7 @@ export function ProjectCard({ name, emoji, progressPct, isCompletedToday, href, 
           ))}
         </div>
       )}
-    </Link>
+    </div>
   )
 }
 
